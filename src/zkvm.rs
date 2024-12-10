@@ -7,24 +7,24 @@ use std::mem::MaybeUninit;
 
 #[inline(always)]
 pub(crate) fn sbox_inplace(val: &mut Fr) {
-    // 计算 x^5 = ((x^2)^2) * x
+    
     let mut tmp = MaybeUninit::<Fr>::uninit();
     
     unsafe {
         let ptr = tmp.as_mut_ptr();
-        // 初始化为0
+        
         *ptr = Fr::zero();
-        // 计算 x^2 (0 + x*x)
+        
         syscall_bn254_scalar_mac(ptr, val, val);
-        // 计算 x^4 (0 + x^2*x^2)
+        
         let x2 = *ptr;
         *ptr = Fr::zero();
         syscall_bn254_scalar_mac(ptr, &x2, &x2);
-        // 计算 x^5 (0 + x^4*x)
+        
         let x4 = *ptr;
         *ptr = Fr::zero();
         syscall_bn254_scalar_mac(ptr, &x4, val);
-        // 写回结果
+      
         *val = *ptr;
     }
 }
