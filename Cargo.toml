@@ -7,10 +7,10 @@ description = "Poseidon hash implementation for BN254"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-sp1-core = { git = "https://github.com/succinctlabs/sp1.git" }
-sp1-zkvm = { git = "https://github.com/succinctlabs/sp1.git" }
-sp1-derive = { git = "https://github.com/succinctlabs/sp1.git" }
-sp1-intrinsics = { git = "https://github.com/succinctlabs/sp1.git" }
+sp1-core = { git = "https://github.com/morph-l2/sp1.git" }
+sp1-zkvm = { git = "https://github.com/morph-l2/sp1.git" }
+sp1-derive = { git = "https://github.com/morph-l2/sp1.git" }
+sp1-intrinsics = { git = "https://github.com/morph-l2/sp1.git" }
 
 [dev-dependencies]
 itertools = "0.11"
@@ -28,8 +28,8 @@ members = [
 [workspace.dependencies]
 itertools = "0.11"
 poseidon-bn254 = { path = "." }
-sp1-core = { git = "https://github.com/succinctlabs/sp1.git" }
-sp1-zkvm = { git = "https://github.com/succinctlabs/sp1.git" }
-sp1-derive = { git = "https://github.com/succinctlabs/sp1.git" }
-sp1-intrinsics = { git = "https://github.com/succinctlabs/sp1.git" }
-sp1-lib = { git = "https://github.com/succinctlabs/sp1.git" }
+sp1-core = { git = "https://github.com/morph-l2/sp1.git" }
+sp1-zkvm = { git = "https://github.com/morph-l2/sp1.git" }
+sp1-derive = { git = "https://github.com/morph-l2/sp1.git" }
+sp1-intrinsics = { git = "https://github.com/morph-l2/sp1.git" }
+sp1-lib = { git = "https://github.com/morph-l2/sp1.git" }
