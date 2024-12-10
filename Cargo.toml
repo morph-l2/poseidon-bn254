@@ -19,19 +19,17 @@ itertools = "0.11"
 default = ["std"]
 std = []
 
-[[test]]
-name = "sp1_tests"
-path = "sp1-tests/test-bn254/program/src/main.rs"
-required-features = ["std"]
-
 [workspace]
 members = [
-    "sp1-tests/test-bn254/program",
-    "sp1-tests/test-bn254/script",
+    "tests/poseidon/program",
+    "tests/poseidon/script",
 ]
 
 [workspace.dependencies]
+itertools = "0.11"
+poseidon-bn254 = { path = "." }
 sp1-core = { git = "https://github.com/succinctlabs/sp1.git" }
 sp1-zkvm = { git = "https://github.com/succinctlabs/sp1.git" }
 sp1-derive = { git = "https://github.com/succinctlabs/sp1.git" }
 sp1-intrinsics = { git = "https://github.com/succinctlabs/sp1.git" }
+sp1-lib = { git = "https://github.com/succinctlabs/sp1.git" }
