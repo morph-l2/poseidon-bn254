@@ -2,7 +2,7 @@
 name = "poseidon-bn254"
 version = "0.1.0"
 edition = "2021"
-authors = ["Scroll Developers"]
+authors = ["Morph Developers--changed from Scroll's initial version"]
 description = "Poseidon hash implementation for BN254"
 license = "MIT OR Apache-2.0"
 
