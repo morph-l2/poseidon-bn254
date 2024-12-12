@@ -1,6 +1,6 @@
 use crate::{Fr, State, T};
 use sp1_intrinsics::{
-    bn254::syscall_bn254_scalar_mac,
+    bn254::syscall_bn254_muladd,
     memory::{memcpy32, memcpy64},
 };
 use std::mem::MaybeUninit;
@@ -15,15 +15,15 @@ pub(crate) fn sbox_inplace(val: &mut Fr) {
         
         *ptr = Fr::zero();
         
-        syscall_bn254_scalar_mac(ptr, val, val);
+        syscall_bn254_muladd(ptr, val, val);
         
         let x2 = *ptr;
         *ptr = Fr::zero();
-        syscall_bn254_scalar_mac(ptr, &x2, &x2);
+        syscall_bn254_muladd(ptr, &x2, &x2);
         
         let x4 = *ptr;
         *ptr = Fr::zero();
-        syscall_bn254_scalar_mac(ptr, &x4, val);
+        syscall_bn254_muladd(ptr, &x4, val);
       
         *val = *ptr;
     }
@@ -85,7 +85,7 @@ pub(crate) unsafe fn set_fr(dst: *mut Fr, val: &Fr) {
 #[inline(always)]
 pub(crate) fn mul_add_assign(dst: &mut Fr, a: &Fr, b: &Fr) {
     unsafe {
-        syscall_bn254_scalar_mac(dst, a, b);
+        syscall_bn254_muladd(dst, a, b);
     }
 }
 
