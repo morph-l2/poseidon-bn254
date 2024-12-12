@@ -7,14 +7,12 @@ use std::mem::MaybeUninit;
 
 #[inline(always)]
 pub(crate) fn sbox_inplace(val: &mut Fr) {
-    
     let mut tmp = MaybeUninit::<Fr>::uninit();
     
     unsafe {
         let ptr = tmp.as_mut_ptr();
         
         *ptr = Fr::zero();
-        
         syscall_bn254_muladd(ptr, val, val);
         
         let x2 = *ptr;
@@ -24,7 +22,7 @@ pub(crate) fn sbox_inplace(val: &mut Fr) {
         let x4 = *ptr;
         *ptr = Fr::zero();
         syscall_bn254_muladd(ptr, &x4, val);
-      
+        
         *val = *ptr;
     }
 }
@@ -77,9 +75,7 @@ pub(crate) fn init_state_with_cap_and_msg<'a>(
 
 #[inline(always)]
 pub(crate) unsafe fn set_fr(dst: *mut Fr, val: &Fr) {
-    unsafe {
-        memcpy32(val, dst);
-    }
+    memcpy32(val, dst);
 }
 
 #[inline(always)]
