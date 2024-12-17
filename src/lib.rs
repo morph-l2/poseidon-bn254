@@ -1,18 +1,40 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::op_ref)]
+#![allow(unexpected_cfgs)]
+
+use itertools::Itertools;
+use std::mem::MaybeUninit;
+use std::ops::AddAssign;
+
+pub use bn254::{
+    ff::{Field, PrimeField},
+    Fr,
+};
 
 mod constants;
-mod imp;
 
-pub use constants::*;
-use core::mem::MaybeUninit;
+#[cfg(all(
+    not(target_os = "zkvm"),
+    not(target_vendor = "succinct"),
+    feature = "zkvm-hint"
+))]
+mod zkvm_hints;
 
-#[cfg(all(target_os = "zkvm", target_vendor = "succinct"))]
-use sp1_core::utils::{BnScalar, Fr};
-#[cfg(all(target_os = "zkvm", target_vendor = "succinct"))]
-use sp1_zkvm::hints::*;
+#[cfg(all(
+    not(target_os = "zkvm"),
+    not(target_vendor = "succinct"),
+    feature = "zkvm-hint"
+))]
+pub use zkvm_hints::set_zkvm_hint_hook;
 
-pub type State = [Fr; T];
-pub type Mds = [[Fr; T]; T];
+pub(crate) use constants::*;
+
+pub(crate) type State = [Fr; T];
+pub(crate) type Mds = [[Fr; T]; T];
+
+
+
+
 
 /// Hash with domain Fr elements with a specified domain.
 pub fn hash_with_domain(inp: &[Fr; 2], domain: Fr) -> Fr {
