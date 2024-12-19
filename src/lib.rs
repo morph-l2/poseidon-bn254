@@ -12,6 +12,7 @@ pub use bn254::{
 };
 
 mod constants;
+mod zkvm;  // 假设实现移到了这个模块
 
 #[cfg(all(
     not(target_os = "zkvm"),
@@ -28,19 +29,16 @@ mod zkvm_hints;
 pub use zkvm_hints::set_zkvm_hint_hook;
 
 pub(crate) use constants::*;
+use zkvm::*;  // 导入 zkvm 模块中的函数
 
 pub(crate) type State = [Fr; T];
 pub(crate) type Mds = [[Fr; T]; T];
 
-
-
-
-
 /// Hash with domain Fr elements with a specified domain.
 pub fn hash_with_domain(inp: &[Fr; 2], domain: Fr) -> Fr {
     let mut state = MaybeUninit::uninit();
-    let state = imp::init_state_with_cap_and_msg(&mut state, &domain, inp);
-    imp::permute(state);
+    let state = init_state_with_cap_and_msg(&mut state, &domain, inp);
+    permute(state);
     state[0]
 }
 
@@ -92,6 +90,30 @@ pub fn hash_code(code: &[u8]) -> Fr {
     hash_msg(&msg, None)
 }
 
+#[inline]
+fn bytes_to_fr(bytes: &[u8]) -> Vec<Fr> {
+    let mut fr_elements = Vec::with_capacity((bytes.len() + 7) / 8);
+    let mut idx = 0;
+
+    while idx < bytes.len() {
+        let remain = bytes.len() - idx;
+        let mut next = 0u64;
+
+        if remain >= 8 {
+            next = u64::from_le_bytes(bytes[idx..idx + 8].try_into().unwrap());
+        } else {
+            let mut tmp = [0u8; 8];
+            tmp[..remain].copy_from_slice(&bytes[idx..]);
+            next = u64::from_le_bytes(tmp);
+        }
+
+        fr_elements.push(Fr::from(next));
+        idx += 8;
+    }
+
+    fr_elements
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,31 +142,6 @@ mod tests {
         let result = hash_code(&[]);
         assert_eq!(result, Fr::zero());
     }
-}
-
-/// Helper function to convert bytes to Fr elements
-#[inline]
-fn bytes_to_fr(bytes: &[u8]) -> Vec<Fr> {
-    let mut fr_elements = Vec::with_capacity((bytes.len() + 7) / 8);
-    let mut idx = 0;
-
-    while idx < bytes.len() {
-        let remain = bytes.len() - idx;
-        let mut next = 0u64;
-
-        if remain >= 8 {
-            next = u64::from_le_bytes(bytes[idx..idx + 8].try_into().unwrap());
-        } else {
-            let mut tmp = [0u8; 8];
-            tmp[..remain].copy_from_slice(&bytes[idx..]);
-            next = u64::from_le_bytes(tmp);
-        }
-
-        fr_elements.push(Fr::from(next));
-        idx += 8;
-    }
-
-    fr_elements
 }
 
 #[cfg(test)]
