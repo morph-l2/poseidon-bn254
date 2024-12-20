@@ -1,0 +1,16 @@
+[workspace]
+members = [
+    "program",
+    "script",
+]
+resolver = "2"
+
+[workspace.dependencies]
+itertools = "0.13"
+poseidon-bn254 = { path = "../..", features = ["bn254"] }
+
+sp1-helper = { git = "https://github.com/morph-l2/sp1.git", branch = "memcopy-dev" }
+sp1-lib = { git = "https://github.com/morph-l2/sp1.git", branch = "memcopy-dev" }
+sp1-prover = { git = "https://github.com/morph-l2/sp1.git", branch = "memcopy-dev" }
+sp1-sdk = { git = "https://github.com/morph-l2/sp1.git", branch = "memcopy-dev", features = ["native-gnark"] }
+sp1-zkvm = { git = "https://github.com/morph-l2/sp1.git", branch = "memcopy-dev" }

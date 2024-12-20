@@ -6,20 +6,28 @@ use itertools::Itertools;
 use std::mem::MaybeUninit;
 use std::ops::AddAssign;
 
-pub use bn254::{
-    ff::{Field, PrimeField},
-    Fr,
-};
+#[cfg(feature = "bn254")]
+pub use bn254::ff::{Field, PrimeField};
+#[cfg(feature = "halo2curves_v1")]
+pub use halo2curves_v1::ff::{Field, PrimeField};
+#[cfg(feature = "halo2curves_v3")]
+pub use halo2curves_v3::ff::{Field, PrimeField};
 
 mod constants;
-mod zkvm;  // 假设实现移到了这个模块
-
+mod imp;
 #[cfg(all(
     not(target_os = "zkvm"),
     not(target_vendor = "succinct"),
     feature = "zkvm-hint"
 ))]
 mod zkvm_hints;
+
+#[cfg(feature = "bn254")]
+pub use bn254::Fr;
+#[cfg(feature = "halo2curves_v1")]
+pub use halo2curves_v1::bn256::Fr;
+#[cfg(feature = "halo2curves_v3")]
+pub use halo2curves_v3::bn256::Fr;
 
 #[cfg(all(
     not(target_os = "zkvm"),
@@ -29,136 +37,252 @@ mod zkvm_hints;
 pub use zkvm_hints::set_zkvm_hint_hook;
 
 pub(crate) use constants::*;
-use zkvm::*;  // 导入 zkvm 模块中的函数
 
 pub(crate) type State = [Fr; T];
 pub(crate) type Mds = [[Fr; T]; T];
 
-/// Hash with domain Fr elements with a specified domain.
 pub fn hash_with_domain(inp: &[Fr; 2], domain: Fr) -> Fr {
-    let mut state = MaybeUninit::uninit();
-    let state = init_state_with_cap_and_msg(&mut state, &domain, inp);
-    permute(state);
+    #[cfg(all(target_os = "zkvm", target_vendor = "succinct", feature = "zkvm-hint"))]
+    return Fr::from_repr_vartime(sp1_lib::io::read_vec().try_into().unwrap()).unwrap();
+
+    if inp[1].is_zero_vartime() && inp[0].is_zero_vartime() && domain.is_zero_vartime() {
+        return EMPTY_HASH;
+    }
+    let mut state = MaybeUninit::<State>::uninit();
+    let state = imp::init_state_with_cap_and_msg(&mut state, &domain, inp);
+    imp::permute(state);
+
+    #[cfg(all(
+        not(target_os = "zkvm"),
+        not(target_vendor = "succinct"),
+        feature = "zkvm-hint"
+    ))]
+    zkvm_hints::hint(state[0].to_repr());
+
     state[0]
 }
 
-/// Hash a message with an optional capacity.
 pub fn hash_msg(msg: &[Fr], cap: Option<u128>) -> Fr {
-    let init_cap = Fr::from(cap.unwrap_or(msg.len() as u128));
-    let mut msg_idx = 0;
-    let mut output = Fr::zero();
+    debug_assert_eq!(RATE, 2);
 
-    while msg_idx < msg.len() {
-        let mut next_inp = [Fr::zero(); 2];
-        let remain = msg.len() - msg_idx;
-        match remain {
-            0 => {}
-            1 => next_inp[0] = msg[msg_idx],
-            _ => {
-                next_inp[0] = msg[msg_idx];
-                next_inp[1] = msg[msg_idx + 1];
+    if msg.is_empty() && cap.map(|c| c == 0).unwrap_or(true) {
+        return EMPTY_HASH;
+    }
+
+    #[cfg(all(target_os = "zkvm", target_vendor = "succinct", feature = "zkvm-hint"))]
+    return Fr::from_repr_vartime(sp1_lib::io::read_vec().try_into().unwrap()).unwrap();
+
+    let cap = cap.map(Fr::from_u128).unwrap_or_else(|| {
+        // trick here since msg.len() won't exceed u64::MAX
+        // msg.len() * (1 << 64) = msg.len() << 64
+        Fr::from_raw([0, msg.len() as u64, 0, 0])
+    });
+
+    let mut state = MaybeUninit::<State>::uninit();
+
+    let state = imp::init_state_with_cap_and_msg(&mut state, &cap, msg);
+    imp::permute(state);
+
+    if msg.len() > 2 {
+        for chunk in msg.chunks(RATE).skip(1) {
+            if chunk.len() == RATE {
+                state[1].add_assign(&chunk[0]);
+                state[2].add_assign(&chunk[1]);
+                imp::permute(state);
+            } else {
+                state[1].add_assign(&chunk[0]);
+                imp::permute(state);
             }
         }
-        output = hash_with_domain(&next_inp, init_cap);
-        msg_idx += RATE;
-    }
-    output
+    };
+
+    #[cfg(all(
+        not(target_os = "zkvm"),
+        not(target_vendor = "succinct"),
+        feature = "zkvm-hint"
+    ))]
+    zkvm_hints::hint(state[0].to_repr());
+
+    state[0]
 }
 
-/// Hash raw bytes.
-pub fn hash_code(code: &[u8]) -> Fr {
+pub fn hash_code(code: &[u8]) -> [u8; 32] {
     if code.is_empty() {
-        return Fr::zero();
+        return EMPTY_HASH_BYTES;
     }
 
-    let mut msg = Vec::with_capacity((code.len() + 7) / 8);
-    let mut idx = 0;
-    while idx < code.len() {
-        let remain = code.len() - idx;
-        let mut next = 0u64;
-        if remain >= 8 {
-            next = u64::from_le_bytes(code[idx..idx + 8].try_into().unwrap());
-        } else {
-            let mut bytes = [0u8; 8];
-            bytes[..remain].copy_from_slice(&code[idx..]);
-            next = u64::from_le_bytes(bytes);
+    #[cfg(all(target_os = "zkvm", target_vendor = "succinct", feature = "zkvm-hint"))]
+    return sp1_lib::io::read_vec().try_into().unwrap();
+
+    let mut msg = code.chunks(POSEIDON_HASH_BYTES_IN_FIELD).map(|chunk| {
+        let mut be_bytes = [0u8; 32];
+        be_bytes[1..1 + chunk.len()].copy_from_slice(chunk);
+        be_bytes.reverse();
+        Fr::from_bytes(&be_bytes).unwrap()
+    });
+
+    let cap = Fr::from_raw([0, code.len() as u64, 0, 0]);
+
+    let mut bytes = match msg.len() {
+        // Safety: we know that the iterator is not empty
+        0 => unsafe { std::hint::unreachable_unchecked() },
+        1 => {
+            let hash =
+                hash_with_domain(&[unsafe { msg.next().unwrap_unchecked() }, Fr::zero()], cap);
+            hash.to_repr()
         }
-        msg.push(Fr::from(next));
-        idx += 8;
-    }
+        _ => {
+            let mut state = MaybeUninit::<State>::uninit();
+            let state = unsafe {
+                imp::set_fr(state.as_mut_ptr() as *mut Fr, &cap);
+                imp::set_fr(
+                    (state.as_mut_ptr() as *mut Fr).add(1),
+                    &msg.next().unwrap_unchecked(),
+                );
+                imp::set_fr(
+                    (state.as_mut_ptr() as *mut Fr).add(2),
+                    &msg.next().unwrap_unchecked(),
+                );
+                state.assume_init_mut()
+            };
+            imp::permute(state);
 
-    hash_msg(&msg, None)
+            for mut chunk in msg.chunks(RATE).into_iter() {
+                let a = chunk.next().unwrap();
+                if let Some(b) = chunk.next() {
+                    state[1].add_assign(a);
+                    state[2].add_assign(b);
+                    imp::permute(state);
+                } else {
+                    state[1].add_assign(a);
+                    imp::permute(state);
+                }
+            }
+            state[0].to_repr()
+        }
+    };
+
+    bytes[0..8].reverse();
+    bytes[8..16].reverse();
+    bytes[16..24].reverse();
+    bytes[24..32].reverse();
+    let mut result = [0u8; 32];
+    result[24..32].copy_from_slice(&bytes[0..8]);
+    result[16..24].copy_from_slice(&bytes[8..16]);
+    result[8..16].copy_from_slice(&bytes[16..24]);
+    result[0..8].copy_from_slice(&bytes[24..32]);
+
+    #[cfg(all(
+        not(target_os = "zkvm"),
+        not(target_vendor = "succinct"),
+        feature = "zkvm-hint"
+    ))]
+    zkvm_hints::hint(result);
+
+    result
 }
 
-#[inline]
-fn bytes_to_fr(bytes: &[u8]) -> Vec<Fr> {
-    let mut fr_elements = Vec::with_capacity((bytes.len() + 7) / 8);
-    let mut idx = 0;
-
-    while idx < bytes.len() {
-        let remain = bytes.len() - idx;
-        let mut next = 0u64;
-
-        if remain >= 8 {
-            next = u64::from_le_bytes(bytes[idx..idx + 8].try_into().unwrap());
-        } else {
-            let mut tmp = [0u8; 8];
-            tmp[..remain].copy_from_slice(&bytes[idx..]);
-            next = u64::from_le_bytes(tmp);
-        }
-
-        fr_elements.push(Fr::from(next));
-        idx += 8;
-    }
-
-    fr_elements
-}
-
-#[cfg(test)]
+#[cfg(all(test, feature = "halo2curves_v1"))]
 mod tests {
     use super::*;
+    use ethers_core::types::U256;
+    use itertools::iproduct;
+    use poseidon_base::hash::{Hashable, MessageHashable, HASHABLE_DOMAIN_SPEC};
+    use std::array;
+
+    #[test]
+    fn test_empty_hash() {
+        let inp = [Fr::zero(), Fr::zero()];
+        let domain = Fr::zero();
+        let result = hash_with_domain(&inp, domain);
+        let expected = Fr::hash_with_domain(inp, domain);
+        assert_eq!(result, expected);
+
+        let result = hash_msg(&[], Some(0));
+        assert_eq!(result, expected);
+
+        let result = hash_msg(&[], None);
+        assert_eq!(result, expected);
+    }
 
     #[test]
     fn test_hash_with_domain() {
         let inp = [Fr::from(1u64), Fr::from(2u64)];
         let domain = Fr::from(3u64);
-        let _result = hash_with_domain(&inp, domain);
+        let result = hash_with_domain(&inp, domain);
+        let expected = Fr::hash_with_domain(inp, domain);
+        assert_eq!(result, expected);
     }
 
     #[test]
     fn test_hash_msg() {
-        let msg = vec![Fr::from(1u64), Fr::from(2u64), Fr::from(3u64)];
-        let _result = hash_msg(&msg, None);
+        let msgs = [
+            &array::from_fn::<_, 1, _>(|i| Fr::from(i as u64))[..],
+            &array::from_fn::<_, 10, _>(|i| Fr::from(i as u64))[..],
+            &array::from_fn::<_, 11, _>(|i| Fr::from(i as u64))[..],
+        ];
+
+        let cap = [None, Some(1u128), Some(10), Some(11), Some(100)];
+
+        for (msg, cap) in iproduct!(msgs.iter(), cap.iter()) {
+            let result = hash_msg(msg, *cap);
+            let expected = Fr::hash_msg(msg, *cap);
+            assert_eq!(result, expected);
+        }
+    }
+
+    fn hash_code_poseidon(code: &[u8]) -> [u8; 32] {
+        let bytes_in_field = POSEIDON_HASH_BYTES_IN_FIELD;
+        let fls = (0..(code.len() / bytes_in_field))
+            .map(|i| i * bytes_in_field)
+            .map(|i| {
+                let mut buf: [u8; 32] = [0; 32];
+                U256::from_big_endian(&code[i..i + bytes_in_field]).to_little_endian(&mut buf);
+                Fr::from_bytes(&buf).unwrap()
+            });
+        let msgs: Vec<_> = fls
+            .chain(if code.len() % bytes_in_field == 0 {
+                None
+            } else {
+                let last_code = &code[code.len() - code.len() % bytes_in_field..];
+                // pad to bytes_in_field
+                let mut last_buf = vec![0u8; bytes_in_field];
+                last_buf.as_mut_slice()[..last_code.len()].copy_from_slice(last_code);
+                let mut buf: [u8; 32] = [0; 32];
+                U256::from_big_endian(&last_buf).to_little_endian(&mut buf);
+                Some(Fr::from_bytes(&buf).unwrap())
+            })
+            .collect();
+
+        let h = if msgs.is_empty() {
+            // the empty code hash is overlapped with simple hash on [0, 0]
+            // an issue in poseidon primitive prevent us calculate it from hash_msg
+            Fr::hash_with_domain([Fr::zero(), Fr::zero()], Fr::zero())
+        } else {
+            Fr::hash_msg(&msgs, Some(code.len() as u128 * HASHABLE_DOMAIN_SPEC))
+        };
+        let mut buf: [u8; 32] = [0; 32];
+        U256::from_little_endian(h.to_repr().as_ref()).to_big_endian(&mut buf);
+        buf
     }
 
     #[test]
     fn test_hash_code() {
-        let code = vec![1u8, 2u8, 3u8, 4u8];
-        let _result = hash_code(&code);
-    }
+        let codes = [
+            &b""[..],
+            &array::from_fn::<_, 1, _>(|i| i as u8)[..],
+            &array::from_fn::<_, 32, _>(|i| i as u8)[..],
+            &array::from_fn::<_, 33, _>(|i| i as u8)[..],
+            &array::from_fn::<_, 64, _>(|i| i as u8)[..],
+            &array::from_fn::<_, 65, _>(|i| i as u8)[..],
+            &array::from_fn::<_, { 32 * 5 }, _>(|i| i as u8)[..],
+            &array::from_fn::<_, { 32 * 5 + 16 }, _>(|i| i as u8)[..],
+        ];
 
-    #[test]
-    fn test_empty_hash() {
-        let result = hash_code(&[]);
-        assert_eq!(result, Fr::zero());
-    }
-}
-
-#[cfg(test)]
-mod conversion_tests {
-    use super::*;
-
-    #[test]
-    fn test_bytes_to_fr() {
-        let bytes = vec![1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 8u8];
-        let fr_elements = bytes_to_fr(&bytes);
-        assert_eq!(fr_elements.len(), 1);
-    }
-
-    #[test]
-    fn test_partial_bytes() {
-        let bytes = vec![1u8, 2u8, 3u8];
-        let fr_elements = bytes_to_fr(&bytes);
-        assert_eq!(fr_elements.len(), 1);
+        for code in codes {
+            let result = hash_code(code);
+            let expected = hash_code_poseidon(code);
+            assert_eq!(result, expected);
+        }
     }
 }
