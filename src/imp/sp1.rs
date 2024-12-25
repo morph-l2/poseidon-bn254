@@ -31,10 +31,10 @@ pub(crate) fn sbox_inplace(val: &mut Fr) {
             in("a1") a.as_mut_ptr(),
         );
         
-        mul_add_assign(&mut a, val, &zero);
-        mul_add_assign(&mut a, val, &zero);
-        mul_add_assign(&mut a, val, &zero);
-        mul_add_assign(&mut a, val, &zero);
+        mul_add_assign(&mut a.assume_init(), val, &zero);
+        mul_add_assign(&mut a.assume_init(), val, &zero);
+        mul_add_assign(&mut a.assume_init(), val, &zero);
+        mul_add_assign(&mut a.assume_init(), val, &zero);
 
         core::arch::asm!(
             "ecall",
