@@ -14,37 +14,46 @@ pub(crate) fn mul_add_assign(a: &mut Fr, b: &Fr, c: &Fr) {
             in("t0") BN254_MULADD,
             in("a0") a,
             in("a1") &[b, c],
+            in("a2") &Fr::zero(),
         );
     }
 }
 
 #[inline(always)]
 pub(crate) fn sbox_inplace(val: &mut Fr) {
-    let mut a = MaybeUninit::<Fr>::uninit();
+    let mut tmp = Fr::zero();
     let zero = Fr::zero();
-
     unsafe {
-        core::arch::asm!(
+        // Copy val to tmp
+        asm!(
             "ecall",
             in("t0") MEMCPY_32,
             in("a0") val,
-            in("a1") a.as_mut_ptr(),
+            in("a1") &mut tmp,
         );
         
-        mul_add_assign(&mut a, val, &zero);
-        mul_add_assign(&mut a, val, &zero);
-        mul_add_assign(&mut a, val, &zero);
-        mul_add_assign(&mut a, val, &zero);
+        // Calculate x^5 using repeated multiplication
+        for _ in 0..4 {
+            asm!(
+                "ecall",
+                in("t0") BN254_MULADD,
+                in("a0") &mut tmp,
+                in("a1") &[val, &zero],
+                in("a2") &zero,
+            );
+        }
 
-        core::arch::asm!(
+        // Copy result back to val
+        asm!(
             "ecall",
             in("t0") MEMCPY_32,
-            in("a0") &a,
+            in("a0") &tmp,
             in("a1") val,
         );
-    };
+    }
 }
 
+// 其余函数保持不变
 #[inline(always)]
 pub(crate) fn fill_state(state: &mut MaybeUninit<State>, val: &Fr) {
     for i in 0..T {
