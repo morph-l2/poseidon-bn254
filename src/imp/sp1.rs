@@ -53,7 +53,7 @@ pub(crate) fn sbox_inplace(val: &mut Fr) {
     }
 }
 
-// 其余函数保持不变
+
 #[inline(always)]
 pub(crate) fn fill_state(state: &mut MaybeUninit<State>, val: &Fr) {
     for i in 0..T {
