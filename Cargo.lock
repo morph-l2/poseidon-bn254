@@ -1095,7 +1095,7 @@ dependencies = [
 [[package]]
 name = "sp1-lib"
 version = "3.0.0"
-source = "git+https://github.com/morph-l2/sp1.git?branch=memcopy-dev#f8da06a36790670a19ea3f4f8ff1b25f8c606dce"
+source = "git+https://github.com/morph-l2/sp1.git?branch=fix-memcopy-chip#7dfce0ecd733d0b1cfefec8cfebf6534c0740362"
 dependencies = [
  "bincode",
  "serde",
