@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 sp1-intrinsics = { git = "https://github.com/Wel15/sp1-intrinsics", optional = true }
-bn254 = { git = "https://github.com/Wel15/bn254", rev = "f6fb66cd180bd02c79ff5a72ccef2a6462c33415", optional = true }
+bn254 = { git = "https://github.com/Wel15/bn254", optional = true }
 halo2curves_v1 = { package = "halo2curves", version = "0.1.0", optional = true }
 halo2curves_v3 = { package = "halo2curves", git = "https://github.com/scroll-tech/halo2curves.git", branch = "base-0.3.3", optional = true }
 itertools = "0.13"

@@ -103,7 +103,7 @@ dependencies = [
 [[package]]
 name = "bn254"
 version = "0.1.0"
-source = "git+https://github.com/Wel15/bn254?rev=f6fb66cd180bd02c79ff5a72ccef2a6462c33415#f6fb66cd180bd02c79ff5a72ccef2a6462c33415"
+source = "git+https://github.com/Wel15/bn254#32eed2ca530d05eb016ce7a139d0bc78cb942dd0"
 dependencies = [
  "ff",
  "getrandom",
