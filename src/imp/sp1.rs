@@ -20,26 +20,62 @@ pub(crate) fn mul_add_assign(dst: &mut Fr, a: &Fr, b: &Fr) {
 }
 
 #[inline(always)]
+pub(crate) fn mul_sp(dst: &mut Fr, a: &Fr) {
+    unsafe {
+        let mut tmp = Fr::zero();
+        
+        
+        asm!(
+            "ecall",
+            in("t0") MEMCPY_32,
+            in("a0") dst,
+            in("a1") &mut tmp,
+        );
+        
+        
+        asm!(
+            "ecall",
+            in("t0") MEMCPY_32,
+            in("a0") &Fr::zero(),
+            in("a1") dst,
+        );
+        
+      
+        asm!(
+            "ecall",
+            in("t0") BN254_MULADD,
+            in("a0") dst,
+            in("a1") &[&tmp, a],
+            in("a2") &Fr::zero(),
+        );
+    }
+}
+
+#[inline(always)]
 pub(crate) fn sbox_inplace(val: &mut Fr) {
-    let mut tmp = Fr::zero();
+    let mut tmp = MaybeUninit::<Fr>::uninit();
     
     unsafe {
+       
         asm!(
             "ecall",
             in("t0") MEMCPY_32,
             in("a0") val,
-            in("a1") &mut tmp,
+            in("a1") tmp.as_mut_ptr(),
         );
         
+        let tmp = tmp.assume_init_mut();
+        
+       
         for _ in 0..4 {
-            let current_tmp = tmp;
-            mul_add_assign(&mut tmp, &current_tmp, val);
+            mul_sp(tmp, val);
         }
 
+      
         asm!(
             "ecall",
             in("t0") MEMCPY_32,
-            in("a0") &tmp,
+            in("a0") tmp,
             in("a1") val,
         );
     }
