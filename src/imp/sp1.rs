@@ -1,41 +1,40 @@
 use crate::{Fr, State, T};
 use sp1_intrinsics::{
-    bn254::{ syscall_bn254_scalar_muladd},
+    bn254::syscall_bn254_scalar_mac,
     memory::{memcpy32, memcpy64},
 };
 use std::mem::MaybeUninit;
 
 #[inline(always)]
 pub(crate) fn sbox_inplace(val: &mut Fr) {
-    let mut temp = MaybeUninit::<Fr>::uninit(); // 用于存储中间计算结果
-    let zero = Fr::zero(); // 用于初始化 temp 为零
-    let mut temp2 = MaybeUninit::<Fr>::uninit(); // 用于存储中间计算结果
+    let mut temp = MaybeUninit::<Fr>::uninit();
+    let zero = Fr::zero();
+    let mut temp2 = MaybeUninit::<Fr>::uninit();
 
-    let mut temp3 = MaybeUninit::<Fr>::uninit(); // 用于存储中间计算结果
+    let mut temp3 = MaybeUninit::<Fr>::uninit();
 
-    let mut temp4 = MaybeUninit::<Fr>::uninit(); // 用于存储中间计算结果
+    let mut temp4 = MaybeUninit::<Fr>::uninit();
 
-    let mut temp5 = MaybeUninit::<Fr>::uninit(); // 用于存储中间计算结果
+    let mut temp5 = MaybeUninit::<Fr>::uninit();
     unsafe {
-        let ptr = temp.as_mut_ptr();     // 获取未初始化内存的指针
-        memcpy32(&zero, ptr);            // 初始化 temp 为零
+        let ptr = temp.as_mut_ptr();
+        memcpy32(&zero, ptr);
         let qtr = temp2.as_mut_ptr();
         memcpy32(val, qtr);
-        
+
         let ttr = temp3.as_mut_ptr();
         let utr = temp4.as_mut_ptr();
         let vtr = temp5.as_mut_ptr();
-        memcpy32(&zero, utr);  
-        memcpy32(&zero, vtr); 
-        syscall_bn254_scalar_muladd(ptr, val as *const Fr, qtr as *const Fr); // ptr = val * val (val^2)
+        memcpy32(&zero, utr);
+        memcpy32(&zero, vtr);
+        syscall_bn254_scalar_mac(ptr, val as *const Fr, qtr as *const Fr); // ptr = val * val (val^2)
 
         memcpy32(ptr, ttr);
-        syscall_bn254_scalar_muladd(utr, ptr as *const Fr, ttr as *const Fr); // utr = val^4
+        syscall_bn254_scalar_mac(utr, ptr as *const Fr, ttr as *const Fr); // utr = val^4
 
-        syscall_bn254_scalar_muladd(vtr, utr as *const Fr, val as *const Fr); // utr = val^4
+        syscall_bn254_scalar_mac(vtr, utr as *const Fr, val as *const Fr); // utr = val^4
 
-
-        memcpy32(vtr, val); // 将最终结果拷贝回 `val`
+        memcpy32(vtr, val);
     };
 }
 
@@ -95,6 +94,6 @@ pub(crate) unsafe fn set_fr(dst: *mut Fr, val: &Fr) {
 #[inline(always)]
 pub(crate) fn mul_add_assign(dst: &mut Fr, a: &Fr, b: &Fr) {
     unsafe {
-        syscall_bn254_scalar_muladd(dst, a, b);
+        syscall_bn254_scalar_mac(dst, a, b);
     }
 }

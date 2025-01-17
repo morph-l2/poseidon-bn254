@@ -99,18 +99,7 @@ dependencies = [
  "generic-array",
 ]
 
-[[package]]
-name = "bn254"
-version = "0.1.0"
-source = "git+https://github.com/Wel15/bn254.git?branch=muladd#2f6524d3d99713ea88a04ebb103bdab83d288bde"
-dependencies = [
- "ff",
- "getrandom",
- "rand",
- "rand_core",
- "sp1-intrinsics",
- "subtle",
-]
+
 
 [[package]]
 name = "byte-slice-cast"
@@ -1045,22 +1034,6 @@ dependencies = [
  "rand_core",
 ]
 
-[[package]]
-name = "sp1-intrinsics"
-version = "0.0.0"
-source = "git+https://github.com/Wel15/sp1-intrinsics.git?branch=master#c71a4141433ecc2cc4cd3c3416935bc850b773f9"
-dependencies = [
- "cfg-if",
-]
-
-[[package]]
-name = "sp1-lib"
-version = "3.0.0"
-source = "git+https://github.com/morph-l2/sp1.git?branch=fix-memcopy-chip#309ed7f8b35d2e73bb179eb38206015e6deac2cc"
-dependencies = [
- "bincode",
- "serde",
-]
 
 [[package]]
 name = "spin"
