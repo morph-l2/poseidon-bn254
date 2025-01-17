@@ -2,11 +2,6 @@ use crate::{Fr, State, T};
 use std::mem::MaybeUninit;
 
 #[inline(always)]
-pub(crate) fn mul_add_assign(a: &mut Fr, b: &Fr, c: &Fr) {
-    *a += b * c;
-}
-
-#[inline(always)]
 fn sbox(val: Fr) -> Fr {
     let a = val.square();
     let b = a.square();
@@ -48,4 +43,9 @@ pub(crate) fn init_state_with_cap_and_msg<'a>(
 #[inline(always)]
 pub(crate) unsafe fn set_fr(dst: *mut Fr, val: &Fr) {
     dst.write(*val);
+}
+
+#[inline(always)]
+pub(crate) fn mul_add_assign(dst: &mut Fr, a: &Fr, b: &Fr) {
+    *dst += a * b;
 }
