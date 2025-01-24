@@ -8,7 +8,7 @@ bn254 = { git = "https://github.com/Wel15/bn254.git", branch = "muladd" }
 itertools = "0.13"
 
 [target.'cfg(all(target_os = "zkvm", target_vendor = "succinct"))'.dependencies]
-sp1-lib = { git = "https://github.com/morph-l2/sp1.git", branch = "fix-memcopy-chip", optional = true }
+sp1-lib = { git = "https://github.com/morph-l2/sp1.git", branch = "v4", optional = true }
 sp1-intrinsics = { git = "https://github.com/Wel15/sp1-intrinsics.git", branch = "master" }
 
 [dev-dependencies]
