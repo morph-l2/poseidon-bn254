@@ -8,6 +8,10 @@ resolver = "2"
 [workspace.dependencies]
 itertools = "0.13"
 poseidon-bn254 = { path = "../..", features = ["bn254"] }
+syn = "2.0.85" 
+thiserror = "1.0.50"  
+async-trait = "0.1.83"
+
 
 sp1-helper = { git = "https://github.com/morph-l2/sp1.git", branch = "v4" }
 sp1-lib = { git = "https://github.com/morph-l2/sp1.git", branch = "v4" }
