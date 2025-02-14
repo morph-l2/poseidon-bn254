@@ -1,3 +1,6 @@
+.DS_Store
+.vscode
+
 /target
 /poseidon/elf
 /poseidon/target
