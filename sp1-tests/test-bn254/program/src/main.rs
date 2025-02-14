@@ -7,7 +7,7 @@ use poseidon_bn254::{hash_code, hash_msg, hash_with_domain, Fr};
 use std::array;
 
 fn main() {
-    // 测试 hash_with_domain
+    // test hash_with_domain
     println!("cycle-tracker-start: hash_with_domain(&[Fr::zero(), Fr::zero()], Fr::zero())");
     let result1 = hash_with_domain(&[Fr::zero(), Fr::zero()], Fr::zero());
     println!("Result: {:?}", result1);
@@ -22,7 +22,7 @@ fn main() {
         "cycle-tracker-end: hash_with_domain(&[Fr::from(1u64), Fr::from(2u64)], Fr::from(3u64))"
     );
 
-    // 测试 hash_msg
+    // test hash_msg
     let msgs = [
         &array::from_fn::<_, 1, _>(|i| Fr::from(i as u64))[..],
         &array::from_fn::<_, 10, _>(|i| Fr::from(i as u64))[..],
@@ -39,7 +39,7 @@ fn main() {
         println!("{}", format!("cycle-tracker-end: {tag}"));
     }
 
-    // 测试 hash_code
+    // test hash_code
     let codes = [
         &[],
         &array::from_fn::<_, 1, _>(|i| i as u8)[..],
