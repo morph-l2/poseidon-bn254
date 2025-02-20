@@ -1189,7 +1189,7 @@ dependencies = [
 [[package]]
 name = "sp1-lib"
 version = "4.0.1"
-source = "git+https://github.com/morph-l2/sp1.git?branch=v4#832fb257197a5ff432a83337e2db023557d9d08d"
+source = "git+https://github.com/morph-l2/sp1.git?branch=v4#755f858d88523140c31ffb1ae8fc276c09338173"
 dependencies = [
  "bincode",
  "serde",
@@ -1199,7 +1199,7 @@ dependencies = [
 [[package]]
 name = "sp1-primitives"
 version = "4.0.1"
-source = "git+https://github.com/morph-l2/sp1.git?branch=v4#832fb257197a5ff432a83337e2db023557d9d08d"
+source = "git+https://github.com/morph-l2/sp1.git?branch=v4#755f858d88523140c31ffb1ae8fc276c09338173"
 dependencies = [
  "bincode",
  "hex",
